@@ -2,7 +2,7 @@ using System;
 
 namespace ProviderProcessing.References
 {
-    public class ProductsReference
+    public class ProductsReference : IProductsReference
     {
         private static ProductsReference instance;
 

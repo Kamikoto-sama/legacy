@@ -2,7 +2,7 @@ using System;
 
 namespace ProviderProcessing.ProviderDatas
 {
-    public class ProviderRepository
+    public class ProviderRepository: IRepository
     {
         public ProviderData FindByProviderId(Guid providerId)
         {

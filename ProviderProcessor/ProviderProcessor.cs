@@ -11,11 +11,20 @@ namespace ProviderProcessing
     public class ProviderProcessor
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(ProviderProcessor));
-        private readonly ProviderRepository repo;
+        private readonly IRepository repo;
+        private readonly IProductsReferenceBuilder productsReferenceBuilder;
+        private readonly IMeasureUnitsReferenceBuilder measureUnitsReferenceBuilder;
+        private readonly ProductValidator productValidator;
 
-        public ProviderProcessor()
+        public ProviderProcessor(IRepository providerRepository, 
+            IProductsReferenceBuilder productsReferenceBuilder,
+            IMeasureUnitsReferenceBuilder measureUnitsReferenceBuilder,
+            ProductValidator productValidator)
         {
-            repo = new ProviderRepository();
+            repo = providerRepository;
+            this.productsReferenceBuilder = productsReferenceBuilder;
+            this.measureUnitsReferenceBuilder = measureUnitsReferenceBuilder;
+            this.productValidator = productValidator;
         }
 
         public ProcessReport ProcessProviderData(string message)
@@ -28,8 +37,9 @@ namespace ProviderProcessing
                     data.ProviderId, data.Timestamp, existingData.Timestamp);
                 return new ProcessReport(false, "Outdated data");
             }
-            var errors = ValidateNames(data.Products)
-                .Concat(data.Products.SelectMany(ValidatePricesAndMeasureUnitCodes))
+            var errors = data.Products
+                .SelectMany(productValidator.ValidateProduct)
+                .OrderByDescending(result => result.Severity)
                 .ToArray();
             if (errors.Any())
             {
@@ -64,7 +74,7 @@ namespace ProviderProcessing
 
         private IEnumerable<ProductValidationResult> ValidateNames(ProductData[] data)
         {
-            var reference = ProductsReference.GetInstance();
+            var reference = productsReferenceBuilder.GetInstance();
             foreach (var product in data)
             {
                 if (!reference.FindCodeByName(product.Name).HasValue)
@@ -84,7 +94,7 @@ namespace ProviderProcessing
 
         private bool IsValidMeasureUnitCode(string measureUnitCode)
         {
-            var reference = MeasureUnitsReference.GetInstance();
+            var reference = measureUnitsReferenceBuilder.GetInstance();
             return reference.FindByCode(measureUnitCode) != null;
         }
 
